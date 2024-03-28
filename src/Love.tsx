@@ -1,13 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Image,
-  StyleSheet,
-  Text,
-  ScrollView,
-  RefreshControl,
-  Pressable,
-} from 'react-native';
+import { View, Image, StyleSheet, Text, Pressable } from 'react-native';
 import Entypo from 'react-native-vector-icons/Entypo';
 import axios from 'axios';
 import { TextInput } from 'react-native-paper';
@@ -18,49 +10,54 @@ const Love = () => {
   const [toggleInput, setToggleInput] = useState(false);
   const [toggleTextHead, setToggleTextHead] = useState(true);
   const [toggleName, setToggleName] = useState(true);
-  const [imageName, setImageName] = useState('rose');
+  const [loading, setLoading] = useState(false);
+  const [imageName, setImageName] = useState('');
   const [imageData, setImageData] = useState(imageUrl + imageName);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchImage = async (url: string) => {
-    if (url.length - imageUrl.length > 2) {
-      const response = await axios.get(url);
-      setImageData(response.request.responseURL);
-    }
-  };
-  useEffect(() => {
+  const fetchImage = async (text: string) => {
+    setLoading(true);
     try {
-      async () => {
-        const textInput = await AsyncStorage.getItem('imageName');
-        console.log('textInput', textInput);
-        if (textInput) setImageName(textInput);
-      };
-    } catch (error) {}
-  }, []);
-
-  const onRefresh = async () => {
-    try {
-      setRefreshing(true);
-      await AsyncStorage.setItem('imageName', imageName);
-      fetchImage(imageUrl + imageName);
-      setRefreshing(false);
+      const url = imageUrl + text;
+      if (url.length - imageUrl.length > 2) {
+        const response = await axios.get(url);
+        setImageData(response.request.responseURL);
+      }
+      setLoading(false);
     } catch (error) {
-      setRefreshing(false);
-      console.log(error);
+      setLoading(false);
     }
   };
-  
-  // setTimeout(() => {
-  //   fetchImage(imageUrl + imageName);
-  // }, 8000);
 
   useEffect(() => {
-    fetchImage(imageUrl + imageName);
+    initializeApp();
   }, []);
 
+  const initializeApp = async () => {
+    try {
+      setLoading(true);
+      const textInput = await AsyncStorage.getItem('imageName');
+      await fetchImage(textInput || 'flower');
+      if (textInput) setImageName(textInput);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      console.log('initialization failed');
+    }
+  };
   const handleTextInput = (text: string) => {
     text = text.trim();
     setImageName(text);
+  };
+  const handleBlur = async () => {
+    const res = await AsyncStorage.setItem('imageName', imageName);
+    setToggleInput(false);
+    fetchImage(imageName);
+  };
+  const handleImagePress = () => {
+    if (!loading) {
+      if (toggleInput) handleBlur();
+      else fetchImage(imageName);
+    }
   };
 
   return (
@@ -73,8 +70,7 @@ const Love = () => {
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'space-around',
-          paddingHorizontal: 70,
+          justifyContent: 'center',
         }}>
         <Pressable onPress={() => setToggleTextHead(!toggleTextHead)}>
           <Text
@@ -84,11 +80,13 @@ const Love = () => {
               fontWeight: '600',
               textAlign: 'center',
             }}>
-            {toggleTextHead ? 'I Love You' : 'Hello Cutie'}
+            {toggleTextHead ? 'I Love You' : 'Hello'}
           </Text>
         </Pressable>
-        <Pressable onPress={() => setToggleInput(!toggleInput)}>
-          <Entypo name={'flower'} size={30} color={'#fff'} />
+        <Pressable
+          onPress={() => setToggleInput(!toggleInput)}
+          style={{ paddingHorizontal: 5, paddingTop: 5 }}>
+          <Entypo name={'flower'} size={40} color={'#fff'} />
         </Pressable>
       </View>
       {toggleInput && (
@@ -104,36 +102,41 @@ const Love = () => {
           activeUnderlineColor={'red'}
           cursorColor={'#000'}
           onChangeText={handleTextInput}
-          onBlur={() => setToggleInput(false)}
+          onBlur={handleBlur}
           style={{
             fontSize: 19,
             minHeight: 20,
             maxHeight: 500,
-            marginTop: 10,
-            paddingVertical: 10,
+            marginTop: 5,
+            paddingVertical: 5,
           }}
         />
       )}
-      <View style={{ marginTop: 40 }}>
-        <ScrollView
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }>
-          <View style={styles.container}>
-            <Image source={{ uri: imageData }} style={styles.image} />
-          </View>
-        </ScrollView>
-      </View>
-      <Pressable onPress={() => setToggleName(!toggleName)}>
+      <Pressable
+        android_ripple={{
+          color: '#fff',
+          foreground: true,
+          radius: 30,
+          borderless: true,
+        }}
+        onLongPress={() => {
+          setToggleInput(!toggleInput);
+        }}
+        onPress={handleImagePress}
+        style={styles.container}>
+        <Image source={{ uri: imageData }} style={styles.image} />
+      </Pressable>
+      <Pressable
+        android_ripple={{ color: '#ed4e7380' }}
+        onPress={() => setToggleName(!toggleName)}>
         <Text
           style={{
-            color: '#fff',
+            color: '#FFFFFF',
             fontSize: 40,
             fontWeight: '600',
             textAlign: 'center',
-            justifyContent: 'flex-end',
           }}>
-          {toggleName ? 'Prachi' : 'Phool Gobi'}
+          {toggleName ? 'Cutie' : 'Phool Gobi'}
         </Text>
       </Pressable>
     </View>
@@ -142,13 +145,12 @@ const Love = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    marginVertical: 20,
     alignItems: 'center',
-    justifyContent: 'flex-end',
   },
   image: {
     width: '100%',
-    height: 600,
+    height: 700,
   },
 });
 
